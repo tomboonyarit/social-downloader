@@ -211,6 +211,12 @@
                     <div class="text-xs md:text-sm font-semibold text-slate-200">Facebook</div>
                     <div class="text-[10px] md:text-xs text-slate-500 mt-0.5">Watch &amp; Reels</div>
                 </div>
+                <!-- Bigo TV -->
+                <div class="platform-chip glass rounded-xl p-3 md:p-4 text-center">
+                    <div class="platform-icon mb-1">🔴</div>
+                    <div class="text-xs md:text-sm font-semibold text-slate-200">Bigo TV</div>
+                    <div class="text-[10px] md:text-xs text-slate-500 mt-0.5">Live &amp; VOD</div>
+                </div>
             </div>
         </section>
 
@@ -369,6 +375,7 @@
                         <li><strong class="text-yellow-400">Instagram:</strong> ToS ห้าม automated access โดยไม่ได้รับอนุญาตล่วงหน้า</li>
                         <li><strong class="text-yellow-400">Twitter / X:</strong> ห้ามการดาวน์โหลดเนื้อหาจำนวนมาก (bulk download)</li>
                         <li><strong class="text-yellow-400">Facebook:</strong> ToS ห้าม scraping และการเก็บข้อมูลอัตโนมัติ</li>
+                        <li><strong class="text-yellow-400">Bigo TV:</strong> เนื้อหาสตรีมมิง — ใช้ตามเงื่อนไขของ Bigo</li>
                     </ul>
                     <p class="mt-2">
                         ⚠️ <strong>สำหรับใช้ส่วนตัวเท่านั้น</strong> — ผู้ใช้ต้องรับผิดชอบเนื้อหาที่มีลิขสิทธิ์
@@ -437,6 +444,7 @@
             { domains: ['instagram.com'],                  id: 'instagram',  name: 'Instagram',  icon: '📸' },
             { domains: ['twitter.com', 'x.com'],           id: 'twitter',    name: 'Twitter / X', icon: '🐦' },
             { domains: ['facebook.com', 'fb.watch', 'fb.com'], id: 'facebook', name: 'Facebook', icon: '👍' },
+            { domains: ['bigo.tv'], id: 'bigo', name: 'Bigo TV', icon: '🔴' },
         ];
 
         function detectPlatform(url) {
@@ -453,12 +461,12 @@
         }
 
         function getPlatformEmoji(platformId) {
-            const map = { youtube:'▶️', tiktok:'🎵', instagram:'📸', twitter:'🐦', facebook:'👍' };
+            const map = { youtube:'▶️', tiktok:'🎵', instagram:'📸', twitter:'🐦', facebook:'👍', bigo:'🔴' };
             return map[platformId] || '🌐';
         }
 
         function getPlatformName(platformId) {
-            const map = { youtube:'YouTube', tiktok:'TikTok', instagram:'Instagram', twitter:'Twitter / X', facebook:'Facebook' };
+            const map = { youtube:'YouTube', tiktok:'TikTok', instagram:'Instagram', twitter:'Twitter / X', facebook:'Facebook', bigo:'Bigo TV' };
             return map[platformId] || platformId;
         }
 

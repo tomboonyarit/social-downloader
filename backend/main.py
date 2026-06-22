@@ -93,6 +93,14 @@ SUPPORTED_PLATFORMS = [
         "status": "⚠️ Fragile",
         "notes": "Login support removed Dec 2025. Use --impersonate + cookies.",
     },
+    {
+        "id": "bigo",
+        "name": "Bigo TV",
+        "url_pattern": "bigo.tv/*",
+        "max_quality": "1080p",
+        "status": "✅ Good",
+        "notes": "Live streams & VODs. Check if stream is live before download.",
+    },
 ]
 
 FORMAT_SPEC = "bv*+ba/b"  # Best video + best audio, fallback to best single file
@@ -267,6 +275,8 @@ def _extract_platform(url: str) -> str:
         return "twitter"
     if "facebook.com" in url_lower or "fb.watch" in url_lower or "fb.com" in url_lower:
         return "facebook"
+    if "bigo.tv" in url_lower:
+        return "bigo"
     return "unknown"
 
 
