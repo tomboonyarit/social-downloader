@@ -1,0 +1,18 @@
+# Social Media Downloader Backend — Dependencies
+# Python 3.10+ required
+
+# Core
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+
+# yt-dlp — the main download engine (Python API, no subprocess)
+yt-dlp>=2026.6.9
+
+# File handling
+aiofiles>=24.1.0
+python-multipart>=0.0.9
+
+# Production extras
+# pip install httptools  # for faster HTTP parsing (uvicorn)
+# pip install orjson     # faster JSON (uvicorn --h11-*)

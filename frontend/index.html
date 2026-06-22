@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Social Media Downloader — ดาวน์โหลดวิดีโอ/รูปภาพ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81' },
+                        surface: { 50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0', 300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b', 600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a' },
+                    },
+                    fontFamily: { sans: ['"Noto Sans Thai"', 'Sarabun', 'sans-serif'] },
+                }
+            }
+        }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Noto Sans Thai', Sarabun, sans-serif; }
+        body { background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%); min-height: 100vh; }
+        .glass {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        .glass-light {
+            background: rgba(255,255,255,0.08);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.12);
+        }
+        .glow { box-shadow: 0 0 30px rgba(99,102,241,0.15); }
+        .platform-chip {
+            transition: all 0.3s ease;
+            cursor: default;
+        }
+        .platform-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99,102,241,0.2);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(99,102,241,0.4);
+        }
+        .btn-primary:active { transform: translateY(0); }
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .btn-download {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-download:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 25px rgba(16,185,129,0.4);
+        }
+        .btn-download:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .input-url {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.12);
+            color: #f1f5f9;
+            transition: all 0.3s ease;
+        }
+        .input-url:focus {
+            outline: none;
+            border-color: #818cf8;
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+            background: rgba(255,255,255,0.1);
+        }
+        .input-url::placeholder { color: rgba(148,163,184,0.6); }
+        .preview-card {
+            transition: all 0.4s ease;
+            opacity: 0;
+            transform: translateY(20px);
+            max-height: 0;
+            overflow: hidden;
+        }
+        .preview-card.show {
+            opacity: 1;
+            transform: translateY(0);
+            max-height: 2000px;
+        }
+        .progress-bar {
+            transition: width 0.5s ease;
+            background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+            background-size: 200% 100%;
+            animation: shimmer 2s ease infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .toast {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 9999;
+            transform: translateX(120%);
+            transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        .toast.show { transform: translateX(0); }
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .pulse-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            animation: pulse 2s ease infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.3); }
+        }
+        .platform-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+        }
+        .disclaimer-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+        .disclaimer-content.open { max-height: 1000px; }
+        @media (max-width: 640px) {
+            .platform-grid { gap: 0.5rem; }
+        }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.3); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.5); }
+    </style>
+</head>
+<body class="text-slate-100 antialiased">
+
+    <!-- ========== TOAST NOTIFICATION ========== -->
+    <div id="toast" class="toast glass-light rounded-xl px-5 py-4 shadow-2xl border border-slate-700/50 max-w-sm">
+        <div class="flex items-center gap-3">
+            <span id="toast-icon" class="text-xl">✅</span>
+            <p id="toast-message" class="text-sm font-medium text-slate-200"></p>
+        </div>
+    </div>
+
+    <!-- ========== MAIN CONTAINER ========== -->
+    <div class="max-w-3xl mx-auto px-4 py-6 md:py-12">
+
+        <!-- HEADER -->
+        <header class="text-center mb-8 md:mb-12">
+            <div class="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-2xl glass mb-4 glow">
+                <span class="text-3xl md:text-4xl">📥</span>
+            </div>
+            <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight">
+                <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                    Social Media Downloader
+                </span>
+            </h1>
+            <p class="mt-2 text-slate-400 text-sm md:text-base">
+                ดาวน์โหลดวิดีโอและรูปภาพจากโซเชียลมีเดีย ง่าย ๆ ในคลิกเดียว
+            </p>
+        </header>
+
+        <!-- ===== PLATFORM BADGES ===== -->
+        <section class="mb-8">
+            <div class="platform-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                <!-- YouTube -->
+                <div class="platform-chip glass rounded-xl p-3 md:p-4 text-center">
+                    <div class="platform-icon mb-1">▶️</div>
+                    <div class="text-xs md:text-sm font-semibold text-slate-200">YouTube</div>
+                    <div class="text-[10px] md:text-xs text-slate-500 mt-0.5">8K 🎥</div>
+                </div>
+                <!-- TikTok -->
+                <div class="platform-chip glass rounded-xl p-3 md:p-4 text-center">
+                    <div class="platform-icon mb-1">🎵</div>
+                    <div class="text-xs md:text-sm font-semibold text-slate-200">TikTok</div>
+                    <div class="text-[10px] md:text-xs text-slate-500 mt-0.5">1080p 🚫💧</div>
+                </div>
+                <!-- Instagram -->
+                <div class="platform-chip glass rounded-xl p-3 md:p-4 text-center">
+                    <div class="platform-icon mb-1">📸</div>
+                    <div class="text-xs md:text-sm font-semibold text-slate-200">Instagram</div>
+                    <div class="text-[10px] md:text-xs text-slate-500 mt-0.5">Reels &amp; Posts</div>
+                </div>
+                <!-- Twitter / X -->
+                <div class="platform-chip glass rounded-xl p-3 md:p-4 text-center">
+                    <div class="platform-icon mb-1">🐦</div>
+                    <div class="text-xs md:text-sm font-semibold text-slate-200">Twitter / X</div>
+                    <div class="text-[10px] md:text-xs text-slate-500 mt-0.5">สูงสุด 1080p</div>
+                </div>
+                <!-- Facebook -->
+                <div class="platform-chip glass rounded-xl p-3 md:p-4 text-center">
+                    <div class="platform-icon mb-1">👍</div>
+                    <div class="text-xs md:text-sm font-semibold text-slate-200">Facebook</div>
+                    <div class="text-[10px] md:text-xs text-slate-500 mt-0.5">Watch &amp; Reels</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== URL INPUT SECTION ===== -->
+        <section class="glass rounded-2xl p-4 md:p-6 mb-6 glow">
+            <div class="flex flex-col gap-4">
+                <div>
+                    <label for="url-input" class="block text-sm font-medium text-slate-300 mb-2">
+                        🔗 วางลิงก์วิดีโอหรือโพสต์
+                    </label>
+                    <div class="relative">
+                        <input
+                            id="url-input"
+                            type="url"
+                            class="input-url w-full rounded-xl px-4 py-3.5 pr-12 text-sm md:text-base"
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            autocomplete="url"
+                            spellcheck="false"
+                        >
+                        <button
+                            id="clear-btn"
+                            class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition text-lg hidden"
+                            aria-label="ล้าง"
+                        >✕</button>
+                    </div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button
+                        id="info-btn"
+                        class="btn-primary flex-1 rounded-xl px-6 py-3.5 font-semibold text-sm md:text-base flex items-center justify-center gap-2"
+                    >
+                        <span id="info-btn-icon">🔍</span>
+                        <span id="info-btn-text">ดูตัวอย่าง</span>
+                    </button>
+                    <button
+                        id="download-btn"
+                        class="btn-download flex-1 rounded-xl px-6 py-3.5 font-semibold text-sm md:text-base flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled
+                    >
+                        <span>⬇️</span>
+                        <span>ดาวน์โหลด</span>
+                    </button>
+                </div>
+
+                <!-- Auto-detected platform indicator -->
+                <div id="detected-platform" class="flex items-center gap-2 text-xs text-slate-500 min-h-[20px]">
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== LOADING STATE ===== -->
+        <div id="loading-section" class="hidden glass rounded-2xl p-8 mb-6 text-center">
+            <div class="flex flex-col items-center gap-3">
+                <svg class="spin h-10 w-10 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="text-slate-300 font-medium" id="loading-text">กำลังดึงข้อมูล...</p>
+            </div>
+        </div>
+
+        <!-- ===== ERROR DISPLAY ===== -->
+        <div id="error-section" class="hidden glass-light rounded-2xl p-4 mb-6 border border-red-500/30">
+            <div class="flex items-start gap-3">
+                <span class="text-xl flex-shrink-0 mt-0.5">❌</span>
+                <div>
+                    <p class="font-semibold text-red-400 text-sm">เกิดข้อผิดพลาด</p>
+                    <p id="error-message" class="text-slate-400 text-sm mt-1"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== MEDIA PREVIEW ===== -->
+        <div id="preview-section" class="preview-card mb-6">
+            <div class="glass rounded-2xl overflow-hidden">
+                <!-- Thumbnail -->
+                <div class="relative bg-slate-800/50 aspect-video flex items-center justify-center overflow-hidden">
+                    <img id="preview-thumbnail" class="w-full h-full object-cover" src="" alt="thumbnail" style="display:none;">
+                    <div id="preview-thumbnail-placeholder" class="flex flex-col items-center gap-2 text-slate-600">
+                        <span class="text-5xl">🎬</span>
+                        <span class="text-sm">ไม่มีรูปตัวอย่าง</span>
+                    </div>
+                    <!-- Duration badge -->
+                    <div id="preview-duration-badge" class="absolute bottom-3 right-3 glass-light rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-200 hidden">
+                    </div>
+                </div>
+
+                <!-- Details -->
+                <div class="p-4 md:p-5">
+                    <h2 id="preview-title" class="text-lg md:text-xl font-bold text-slate-100 line-clamp-2"></h2>
+                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-400">
+                        <span id="preview-platform" class="flex items-center gap-1"></span>
+                        <span id="preview-uploader" class="flex items-center gap-1"></span>
+                        <span id="preview-views" class="flex items-center gap-1"></span>
+                        <span id="preview-date" class="flex items-center gap-1"></span>
+                    </div>
+                    <p id="preview-description" class="mt-3 text-sm text-slate-500 line-clamp-3"></p>
+
+                    <!-- Format info -->
+                    <div id="preview-formats" class="mt-4 pt-4 border-t border-slate-700/50">
+                        <p class="text-xs font-medium text-slate-500 mb-2">คุณภาพที่เลือก:</p>
+                        <div class="flex flex-wrap gap-2">
+                            <span id="preview-format-tag" class="bg-indigo-500/20 text-indigo-300 text-xs font-medium px-3 py-1.5 rounded-lg border border-indigo-500/20"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== DOWNLOAD PROGRESS ===== -->
+        <div id="progress-section" class="hidden glass rounded-2xl p-4 md:p-5 mb-6">
+            <div class="flex items-center justify-between mb-3">
+                <div class="flex items-center gap-2">
+                    <div class="pulse-dot"></div>
+                    <span class="text-sm font-semibold text-slate-200">กำลังดาวน์โหลด...</span>
+                </div>
+                <span id="progress-percent" class="text-sm font-bold text-indigo-400">0%</span>
+            </div>
+            <div class="w-full bg-slate-700/50 rounded-full h-2.5 overflow-hidden">
+                <div id="progress-bar" class="progress-bar h-full rounded-full" style="width: 0%;"></div>
+            </div>
+            <p id="progress-status" class="mt-2 text-xs text-slate-500">กำลังเริ่มต้น...</p>
+            <div id="download-complete" class="hidden mt-4 pt-3 border-t border-slate-700/50">
+                <div class="flex items-center gap-2 text-emerald-400">
+                    <span>✅</span>
+                    <span class="text-sm font-semibold">ดาวน์โหลดสำเร็จ!</span>
+                </div>
+                <p id="download-result" class="text-xs text-slate-500 mt-1"></p>
+            </div>
+        </div>
+
+        <!-- ===== DISCLAIMER ===== -->
+        <section class="glass rounded-2xl overflow-hidden mt-8 mb-6">
+            <button
+                id="disclaimer-toggle"
+                class="w-full flex items-center justify-between p-4 md:p-5 text-left hover:bg-white/5 transition"
+            >
+                <div class="flex items-center gap-2">
+                    <span>⚖️</span>
+                    <span class="font-semibold text-sm text-slate-300">ข้อจำกัดความรับผิดชอบ</span>
+                </div>
+                <svg id="disclaimer-arrow" class="w-4 h-4 text-slate-500 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+            </button>
+            <div id="disclaimer-content" class="disclaimer-content">
+                <div class="px-4 md:px-5 pb-4 md:pb-5 text-xs md:text-sm text-slate-400 space-y-2 leading-relaxed">
+                    <p>
+                        <strong class="text-slate-300">เครื่องมือนี้ใช้ yt-dlp</strong> ซึ่งทำงานโดย reverse-engineer
+                        internal APIs ของ social media platforms การใช้งานอาจผิด ToS ของ platform นั้น ๆ
+                    </p>
+                    <ul class="list-disc pl-5 space-y-1">
+                        <li><strong class="text-yellow-400">YouTube:</strong> Section 4.C ห้ามดาวน์โหลดวิดีโอโดยไม่ได้รับอนุญาตจาก YouTube</li>
+                        <li><strong class="text-yellow-400">TikTok:</strong> Section L62 ห้าม scraping หรือดาวน์โหลดเนื้อหาโดยไม่ได้รับอนุญาต</li>
+                        <li><strong class="text-yellow-400">Instagram:</strong> ToS ห้าม automated access โดยไม่ได้รับอนุญาตล่วงหน้า</li>
+                        <li><strong class="text-yellow-400">Twitter / X:</strong> ห้ามการดาวน์โหลดเนื้อหาจำนวนมาก (bulk download)</li>
+                        <li><strong class="text-yellow-400">Facebook:</strong> ToS ห้าม scraping และการเก็บข้อมูลอัตโนมัติ</li>
+                    </ul>
+                    <p class="mt-2">
+                        ⚠️ <strong>สำหรับใช้ส่วนตัวเท่านั้น</strong> — ผู้ใช้ต้องรับผิดชอบเนื้อหาที่มีลิขสิทธิ์
+                        ห้ามนำไปใช้ในเชิงพาณิชย์หรือเผยแพร่โดยไม่ได้รับอนุญาต
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="text-center text-xs text-slate-600 py-6">
+            <p>พัฒนาโดย Nous Research 💙 สำหรับคุณพ่อเลี้ยงต้อม • v1.0</p>
+        </footer>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- JAVASCRIPT                                                     -->
+    <!-- ============================================================ -->
+    <script>
+    (function() {
+        'use strict';
+
+        // ---- DOM refs ----
+        const urlInput          = document.getElementById('url-input');
+        const clearBtn          = document.getElementById('clear-btn');
+        const infoBtn           = document.getElementById('info-btn');
+        const infoBtnIcon       = document.getElementById('info-btn-icon');
+        const infoBtnText       = document.getElementById('info-btn-text');
+        const downloadBtn       = document.getElementById('download-btn');
+        const detectedPlatform  = document.getElementById('detected-platform');
+        const loadingSection    = document.getElementById('loading-section');
+        const loadingText       = document.getElementById('loading-text');
+        const errorSection      = document.getElementById('error-section');
+        const errorMessage      = document.getElementById('error-message');
+        const previewSection    = document.getElementById('preview-section');
+        const previewThumbnail  = document.getElementById('preview-thumbnail');
+        const previewThumbPlaceholder = document.getElementById('preview-thumbnail-placeholder');
+        const previewDurBadge   = document.getElementById('preview-duration-badge');
+        const previewTitle      = document.getElementById('preview-title');
+        const previewPlatform   = document.getElementById('preview-platform');
+        const previewUploader   = document.getElementById('preview-uploader');
+        const previewViews      = document.getElementById('preview-views');
+        const previewDate       = document.getElementById('preview-date');
+        const previewDesc       = document.getElementById('preview-description');
+        const previewFormatTag  = document.getElementById('preview-format-tag');
+        const progressSection   = document.getElementById('progress-section');
+        const progressBar       = document.getElementById('progress-bar');
+        const progressPercent   = document.getElementById('progress-percent');
+        const progressStatus    = document.getElementById('progress-status');
+        const downloadComplete  = document.getElementById('download-complete');
+        const downloadResult    = document.getElementById('download-result');
+        const toast             = document.getElementById('toast');
+        const toastIcon         = document.getElementById('toast-icon');
+        const toastMessage      = document.getElementById('toast-message');
+        const disclaimerToggle  = document.getElementById('disclaimer-toggle');
+        const disclaimerContent = document.getElementById('disclaimer-content');
+        const disclaimerArrow   = document.getElementById('disclaimer-arrow');
+
+        // Use relative URLs — the gateway server serves frontend + proxies /api/ to backend
+        const API_BASE = '';
+
+        // ---- Platform detection ----
+        const PLATFORMS = [
+            { domains: ['youtube.com', 'youtu.be'],       id: 'youtube',    name: 'YouTube',    icon: '▶️' },
+            { domains: ['tiktok.com', 'vm.tiktok.com'],    id: 'tiktok',     name: 'TikTok',     icon: '🎵' },
+            { domains: ['instagram.com'],                  id: 'instagram',  name: 'Instagram',  icon: '📸' },
+            { domains: ['twitter.com', 'x.com'],           id: 'twitter',    name: 'Twitter / X', icon: '🐦' },
+            { domains: ['facebook.com', 'fb.watch', 'fb.com'], id: 'facebook', name: 'Facebook', icon: '👍' },
+        ];
+
+        function detectPlatform(url) {
+            try {
+                const u = new URL(url);
+                const host = u.hostname.replace(/^www\./, '');
+                for (const p of PLATFORMS) {
+                    if (p.domains.some(d => host === d || host.endsWith('.' + d))) {
+                        return p;
+                    }
+                }
+            } catch (_) { /* invalid URL */ }
+            return null;
+        }
+
+        function getPlatformEmoji(platformId) {
+            const map = { youtube:'▶️', tiktok:'🎵', instagram:'📸', twitter:'🐦', facebook:'👍' };
+            return map[platformId] || '🌐';
+        }
+
+        function getPlatformName(platformId) {
+            const map = { youtube:'YouTube', tiktok:'TikTok', instagram:'Instagram', twitter:'Twitter / X', facebook:'Facebook' };
+            return map[platformId] || platformId;
+        }
+
+        // ---- Utility ----
+        function formatDuration(seconds) {
+            if (!seconds || seconds <= 0) return '';
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+            return `${m}:${String(s).padStart(2,'0')}`;
+        }
+
+        function formatNumber(n) {
+            if (!n && n !== 0) return '';
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+            if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+            return n.toLocaleString('th-TH');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            // yyyymmdd → readable
+            if (/^\d{8}$/.test(dateStr)) {
+                const y = dateStr.slice(0,4), m = dateStr.slice(4,6), d = dateStr.slice(6,8);
+                return `${d}/${m}/${y}`;
+            }
+            return dateStr;
+        }
+
+        function showToast(icon, msg, duration) {
+            toastIcon.textContent = icon;
+            toastMessage.textContent = msg;
+            toast.classList.add('show');
+            clearTimeout(toast._timer);
+            toast._timer = setTimeout(() => toast.classList.remove('show'), duration || 3000);
+        }
+
+        function hideToast() {
+            toast.classList.remove('show');
+        }
+
+        // ---- State ----
+        let mediaInfo = null;
+        let isDownloading = false;
+
+        // ---- DOM helpers ----
+        function showLoading(text) {
+            loadingText.textContent = text || 'กำลังดึงข้อมูล...';
+            loadingSection.classList.remove('hidden');
+            previewSection.classList.remove('show');
+            errorSection.classList.add('hidden');
+            hideToast();
+        }
+
+        function hideLoading() {
+            loadingSection.classList.add('hidden');
+        }
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            errorSection.classList.remove('hidden');
+            hideLoading();
+            previewSection.classList.remove('show');
+            resetProgress();
+        }
+
+        function resetProgress() {
+            progressSection.classList.add('hidden');
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
+            progressStatus.textContent = '';
+            downloadComplete.classList.add('hidden');
+            isDownloading = false;
+            downloadBtn.disabled = !mediaInfo;
+            downloadBtn.innerHTML = '<span>⬇️</span><span>ดาวน์โหลด</span>';
+        }
+
+        function setInfoButtonLoading(loading) {
+            if (loading) {
+                infoBtnIcon.textContent = '⏳';
+                infoBtnText.textContent = 'กำลังโหลด...';
+                infoBtn.disabled = true;
+            } else {
+                infoBtnIcon.textContent = '🔍';
+                infoBtnText.textContent = 'ดูตัวอย่าง';
+                infoBtn.disabled = false;
+            }
+        }
+
+        // ---- URL input handler ----
+        function onUrlChange() {
+            const url = urlInput.value.trim();
+            if (url) {
+                clearBtn.classList.remove('hidden');
+                const plat = detectPlatform(url);
+                if (plat) {
+                    detectedPlatform.innerHTML = `<span class="flex items-center gap-1"><span>${plat.icon}</span><span>ตรวจพบ: ${plat.name}</span></span>`;
+                } else {
+                    detectedPlatform.innerHTML = `<span class="text-yellow-500">⚠️ ไม่รู้จัก URL นี้ กรุณาตรวจสอบ</span>`;
+                }
+            } else {
+                clearBtn.classList.add('hidden');
+                detectedPlatform.innerHTML = '';
+            }
+            // Clear previous preview
+            mediaInfo = null;
+            downloadBtn.disabled = true;
+            previewSection.classList.remove('show');
+            errorSection.classList.add('hidden');
+        }
+
+        urlInput.addEventListener('input', onUrlChange);
+        clearBtn.addEventListener('click', function() {
+            urlInput.value = '';
+            urlInput.focus();
+            onUrlChange();
+        });
+
+        // ---- Fetch info ----
+        async function fetchInfo() {
+            const url = urlInput.value.trim();
+            if (!url) {
+                showError('กรุณากรอก URL ก่อน');
+                return;
+            }
+
+            setInfoButtonLoading(true);
+            showLoading('กำลังดึงข้อมูล media...');
+            mediaInfo = null;
+            downloadBtn.disabled = true;
+
+            try {
+                const resp = await fetch(API_BASE + '/api/info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+
+                if (!resp.ok) {
+                    let detail = 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์';
+                    try {
+                        const errData = await resp.json();
+                        detail = errData.detail || errData.error || detail;
+                    } catch (_) {}
+                    throw new Error(detail);
+                }
+
+                mediaInfo = await resp.json();
+                hideLoading();
+                renderPreview(mediaInfo);
+                downloadBtn.disabled = false;
+                showToast('✅', 'ดึงข้อมูลสำเร็จ');
+
+            } catch (err) {
+                hideLoading();
+                showError(err.message || 'ไม่สามารถดึงข้อมูลได้');
+                showToast('❌', err.message || 'เกิดข้อผิดพลาด');
+            } finally {
+                setInfoButtonLoading(false);
+            }
+        }
+
+        // ---- Render preview ----
+        function renderPreview(info) {
+            // Thumbnail
+            if (info.thumbnail) {
+                previewThumbnail.src = info.thumbnail;
+                previewThumbnail.style.display = 'block';
+                previewThumbnail.onerror = function() {
+                    this.style.display = 'none';
+                    previewThumbPlaceholder.style.display = 'flex';
+                };
+                previewThumbnail.onload = function() {
+                    previewThumbPlaceholder.style.display = 'none';
+                };
+                previewThumbPlaceholder.style.display = 'none';
+            } else {
+                previewThumbnail.style.display = 'none';
+                previewThumbPlaceholder.style.display = 'flex';
+            }
+
+            // Duration
+            if (info.duration) {
+                previewDurBadge.textContent = '⏱ ' + formatDuration(info.duration);
+                previewDurBadge.classList.remove('hidden');
+            } else {
+                previewDurBadge.classList.add('hidden');
+            }
+
+            // Title
+            previewTitle.textContent = info.title || 'ไม่มีชื่อ';
+
+            // Platform
+            const platEmoji = getPlatformEmoji(info.platform);
+            const platName = getPlatformName(info.platform);
+            previewPlatform.innerHTML = `<span>${platEmoji} ${platName}</span>`;
+
+            // Uploader
+            if (info.uploader) {
+                previewUploader.innerHTML = `<span>👤 ${info.uploader}</span>`;
+                previewUploader.classList.remove('hidden');
+            } else {
+                previewUploader.classList.add('hidden');
+            }
+
+            // Views
+            if (info.view_count !== undefined && info.view_count !== null) {
+                previewViews.innerHTML = `<span>👁️ ${formatNumber(info.view_count)} ครั้ง</span>`;
+                previewViews.classList.remove('hidden');
+            } else {
+                previewViews.classList.add('hidden');
+            }
+
+            // Date
+            if (info.upload_date) {
+                previewDate.innerHTML = `<span>📅 ${formatDate(info.upload_date)}</span>`;
+                previewDate.classList.remove('hidden');
+            } else {
+                previewDate.classList.add('hidden');
+            }
+
+            // Description
+            if (info.description) {
+                previewDesc.textContent = info.description;
+                previewDesc.classList.remove('hidden');
+            } else {
+                previewDesc.classList.add('hidden');
+            }
+
+            // Format
+            if (info.best_format) {
+                const f = info.best_format;
+                let label = f.ext ? f.ext.toUpperCase() : '';
+                if (f.resolution) label += (label ? ' · ' : '') + f.resolution;
+                if (f.filesize || f.filesize_approx) {
+                    const bytes = f.filesize || f.filesize_approx;
+                    const size = bytes >= 1073741824
+                        ? (bytes / 1073741824).toFixed(1) + ' GB'
+                        : bytes >= 1048576
+                            ? (bytes / 1048576).toFixed(1) + ' MB'
+                            : (bytes / 1024).toFixed(0) + ' KB';
+                    label += ' · ' + size;
+                }
+                previewFormatTag.textContent = label || 'อัตโนมัติ (คุณภาพดีที่สุด)';
+            } else {
+                previewFormatTag.textContent = 'อัตโนมัติ (คุณภาพดีที่สุด)';
+            }
+
+            // Show the card
+            previewSection.classList.add('show');
+        }
+
+        // ---- Download ----
+        async function startDownload() {
+            const url = urlInput.value.trim();
+            if (!url || isDownloading) return;
+
+            isDownloading = true;
+            downloadBtn.disabled = true;
+            downloadBtn.innerHTML = '<svg class="spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>กำลังดาวน์โหลด...</span>';
+
+            progressSection.classList.remove('hidden');
+            progressBar.style.width = '0%';
+            progressPercent.textContent = '0%';
+            progressStatus.textContent = 'กำลังเชื่อมต่อเซิร์ฟเวอร์...';
+            downloadComplete.classList.add('hidden');
+
+            try {
+                const resp = await fetch(API_BASE + '/api/download', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url }),
+                });
+
+                if (!resp.ok) {
+                    let detail = 'เกิดข้อผิดพลาดจากเซิร์ฟเวอร์';
+                    try {
+                        const errData = await resp.json();
+                        detail = errData.detail || errData.error || detail;
+                    } catch (_) {}
+                    throw new Error(detail);
+                }
+
+                // Get content length for progress
+                const contentLength = resp.headers.get('Content-Length');
+                const total = contentLength ? parseInt(contentLength, 10) : 0;
+                const platform = resp.headers.get('X-Download-Platform') || '';
+                const fileSize = resp.headers.get('X-Download-Size') || '';
+
+                // Read the blob with progress
+                const reader = resp.body.getReader();
+                let loaded = 0;
+                const chunks = [];
+
+                progressStatus.textContent = 'กำลังดาวน์โหลดไฟล์...';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    loaded += value.length;
+                    if (total > 0) {
+                        const pct = Math.min(100, Math.round((loaded / total) * 100));
+                        progressBar.style.width = pct + '%';
+                        progressPercent.textContent = pct + '%';
+                    } else {
+                        // Indeterminate — show loaded MB
+                        const mb = (loaded / 1048576).toFixed(1);
+                        progressBar.style.width = Math.min(95, (loaded % 1000000) / 10000) + '%';
+                        progressPercent.textContent = mb + ' MB';
+                    }
+                }
+
+                // Complete
+                progressBar.style.width = '100%';
+                progressPercent.textContent = '100%';
+                progressStatus.textContent = 'กำลังสร้างไฟล์...';
+
+                const blob = new Blob(chunks);
+
+                // Determine filename from response or info
+                let filename = '';
+                const disposition = resp.headers.get('Content-Disposition');
+                if (disposition) {
+                    const match = disposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                    if (match) filename = match[1].replace(/['"]/g, '');
+                }
+                if (!filename && mediaInfo && mediaInfo.title) {
+                    const ext = blob.type.includes('mp4') ? '.mp4'
+                              : blob.type.includes('jpeg') || blob.type.includes('jpg') ? '.jpg'
+                              : blob.type.includes('png') ? '.png'
+                              : blob.type.includes('webm') ? '.webm'
+                              : blob.type.includes('audio') ? '.mp3'
+                              : '.mp4';
+                    filename = mediaInfo.title.replace(/[/\\:*?"<>|]/g, '_').substring(0, 80) + ext;
+                }
+                if (!filename) filename = 'download.mp4';
+
+                // Trigger download
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+
+                // Show success
+                downloadComplete.classList.remove('hidden');
+                let resultText = `ไฟล์: ${filename}`;
+                if (platform) resultText += ` · แพลตฟอร์ม: ${getPlatformName(platform)}`;
+                if (fileSize) {
+                    const bytes = parseInt(fileSize, 10);
+                    if (!isNaN(bytes)) {
+                        const size = bytes >= 1073741824
+                            ? (bytes / 1073741824).toFixed(1) + ' GB'
+                            : bytes >= 1048576
+                                ? (bytes / 1048576).toFixed(1) + ' MB'
+                                : (bytes / 1024).toFixed(0) + ' KB';
+                        resultText += ` · ขนาด: ${size}`;
+                    }
+                }
+                downloadResult.textContent = resultText;
+                progressStatus.textContent = 'ดาวน์โหลดเสร็จสมบูรณ์ ✅';
+                showToast('✅', 'ดาวน์โหลดสำเร็จ!');
+
+            } catch (err) {
+                progressStatus.textContent = 'เกิดข้อผิดพลาด ❌';
+                showToast('❌', err.message || 'ดาวน์โหลดไม่สำเร็จ');
+                // Show error in progress section
+                downloadComplete.classList.remove('hidden');
+                downloadComplete.querySelector('.flex').innerHTML = '<span>❌</span><span class="text-sm font-semibold text-red-400">ดาวน์โหลดไม่สำเร็จ</span>';
+                downloadResult.textContent = err.message || 'เกิดข้อผิดพลาดระหว่างดาวน์โหลด';
+            } finally {
+                isDownloading = false;
+                downloadBtn.disabled = false;
+                downloadBtn.innerHTML = '<span>⬇️</span><span>ดาวน์โหลด</span>';
+            }
+        }
+
+        // ---- Event listeners ----
+        infoBtn.addEventListener('click', fetchInfo);
+        downloadBtn.addEventListener('click', startDownload);
+
+        urlInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                fetchInfo();
+            }
+        });
+
+        // ---- Disclaimer toggle ----
+        let disclaimerOpen = false;
+        disclaimerToggle.addEventListener('click', function() {
+            disclaimerOpen = !disclaimerOpen;
+            disclaimerContent.classList.toggle('open');
+            disclaimerArrow.style.transform = disclaimerOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+        });
+
+        // ---- Initial load: check platforms endpoint ----
+        (async function init() {
+            try {
+                const resp = await fetch(API_BASE + '/api/platforms');
+                if (resp.ok) {
+                    console.log('✅ Backend API connected');
+                } else {
+                    console.warn('⚠️ Backend returned', resp.status);
+                }
+            } catch (e) {
+                console.warn('⚠️ Backend not reachable:', e.message);
+            }
+        })();
+
+    })();
+    </script>
+
+</body>
+</html>
